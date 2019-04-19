@@ -146,6 +146,12 @@ public enum EventType {
    * Master asking RS to switch rpc throttle state.
    */
   M_RS_SWITCH_RPC_THROTTLE(27, ExecutorType.RS_SWITCH_RPC_THROTTLE),
+  /**
+   * Messages originating from Master to RS.<br>
+   * M_RS_REFRESH_PERMISSION_CACHE<br>
+   * Master asking RS to update permission cache.
+   */
+  M_RS_REFRESH_PERMISSION_CACHE(28, ExecutorType.RS_REFRESH_PERMISSION_CACHE),
 
   /**
    * Messages originating from Client to Master.<br>
