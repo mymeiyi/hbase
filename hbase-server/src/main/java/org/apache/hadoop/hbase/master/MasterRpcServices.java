@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil.NonceProcedureRunnable;
+import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
@@ -107,6 +108,7 @@ import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
+import org.apache.hadoop.hbase.security.access.UpdatePermissionProcedure;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -2712,10 +2714,11 @@ public class MasterRpcServices extends RSRpcServices
       if (master.cpHost != null) {
         master.cpHost.preGrant(perm, mergeExistingPermissions);
       }
-      try (Table table = master.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-        PermissionStorage.addUserPermission(getConfiguration(), perm, table,
-          mergeExistingPermissions);
-      }
+      ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
+      UpdatePermissionProcedure procedure = new UpdatePermissionProcedure(perm,
+          mergeExistingPermissions, true, master.getServerName(), getZKPermissionStorage(), latch);
+      master.getMasterProcedureExecutor().submitProcedure(procedure);
+      latch.await();
       if (master.cpHost != null) {
         master.cpHost.postGrant(perm, mergeExistingPermissions);
       }
@@ -2734,9 +2737,11 @@ public class MasterRpcServices extends RSRpcServices
       if (master.cpHost != null) {
         master.cpHost.preRevoke(userPermission);
       }
-      try (Table table = master.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-        PermissionStorage.removeUserPermission(master.getConfiguration(), userPermission, table);
-      }
+      ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
+      UpdatePermissionProcedure procedure = new UpdatePermissionProcedure(userPermission, false,
+          false, master.getServerName(), getZKPermissionStorage(), latch);
+      master.getMasterProcedureExecutor().submitProcedure(procedure);
+      latch.await();
       if (master.cpHost != null) {
         master.cpHost.postRevoke(userPermission);
       }

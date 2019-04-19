@@ -147,7 +147,7 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
-import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
+import org.apache.hadoop.hbase.security.access.ZKPermissionStorage;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
@@ -1968,6 +1968,8 @@ public class HRegionServer extends HasThread implements
       conf.getInt("hbase.regionserver.executor.replay.sync.replication.wal.threads", 1));
     this.executorService.startExecutorService(ExecutorType.RS_SWITCH_RPC_THROTTLE,
       conf.getInt("hbase.regionserver.executor.switch.rpc.throttle.threads", 1));
+    this.executorService.startExecutorService(ExecutorType.RS_REFRESH_PERMISSION_CACHE,
+      conf.getInt("hbase.regionserver.executor.refresh.permission.cache.threads", 1));
 
     Threads.setDaemonThreadRunning(this.walRoller.getThread(), getName() + ".logRoller",
     uncaughtExceptionHandler);
@@ -3684,8 +3686,8 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public ZKPermissionWatcher getZKPermissionWatcher() {
-    return rpcServices.getZkPermissionWatcher();
+  public ZKPermissionStorage getZKPermissionStorage() {
+    return rpcServices.getZKPermissionStorage();
   }
 
   /**
