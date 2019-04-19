@@ -38,6 +38,7 @@ class ServerQueue extends Queue<ServerName> {
       case SWITCH_RPC_THROTTLE:
       case SPLIT_WAL:
       case SPLIT_WAL_REMOTE:
+      case REFRESH_PERMISSION_CACHE:
         return false;
       default:
         break;
