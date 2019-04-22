@@ -127,6 +127,6 @@ public class ZKPermissionStorage {
     } catch (KeeperException e) {
       LOG.error("Failed deleting acl node '{}'", zkNode, e);
       watcher.abort("Failed deleting node " + zkNode, e);
-    }  
+    }
   }
 }

@@ -34,8 +34,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.UpdatePermissionState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 @InterfaceAudience.Private
 public class UpdatePermissionProcedure
@@ -87,7 +87,7 @@ public class UpdatePermissionProcedure
     switch (state) {
       case UPDATE_PERMISSION_STORAGE:
         try {
-          // update permission in acl table and acl znode  
+          // update permission in acl table and acl znode
           updatePermissionStorage(env);
           // update permission in master auth manager cache
           env.getMasterServices().getAccessChecker().getAuthManager().refresh(entry,
@@ -95,7 +95,8 @@ public class UpdatePermissionProcedure
         } catch (IOException e) {
           long backoff = ProcedureUtil.getBackoffTimeMs(this.attempts++);
           LOG.warn(
-            "Failed to update user permission {}, type {}, merge existing permissions {},  sleep {} secs and retry",
+            "Failed to update user permission {}, type {}, merge existing permissions {},  "
+                + "sleep {} secs and retry",
             userPermission, isGrant ? "grant" : "revoke", mergeExistingPermissions, backoff / 1000,
             e);
           setTimeout(Math.toIntExact(backoff));
@@ -125,7 +126,7 @@ public class UpdatePermissionProcedure
   private void updatePermissionStorage(MasterProcedureEnv env) throws IOException {
     try (Table table =
         env.getMasterServices().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-      // update permission to acl table  
+      // update permission to acl table
       if (isGrant) {
         PermissionStorage.addUserPermission(env.getMasterConfiguration(), userPermission, table,
           mergeExistingPermissions);
