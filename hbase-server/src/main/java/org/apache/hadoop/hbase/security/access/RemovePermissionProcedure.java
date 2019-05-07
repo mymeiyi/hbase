@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +46,7 @@ public class RemovePermissionProcedure
   private ServerName serverName;
   private ZKPermissionStorage zkPermissionStorage;
   private ProcedurePrepareLatch syncLatch;
-  private int attempts;
+  private RetryCounter retryCounter;
 
   public RemovePermissionProcedure() {
   }
@@ -84,7 +85,10 @@ public class RemovePermissionProcedure
           // remove permission from master auth manager cache
           env.getMasterServices().getAccessChecker().getAuthManager().remove(entry);
         } catch (IOException e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(this.attempts++);
+          if (retryCounter == null) {
+            retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
+          }
+          long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
           LOG.warn("Failed to remove permission for entry {}, sleep {} secs and retry", entry,
             backoff / 1000, e);
           setTimeout(Math.toIntExact(backoff));
