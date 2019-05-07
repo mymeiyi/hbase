@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +51,7 @@ public class UpdatePermissionProcedure
   private String entry;
   private byte[] userPermissions;
   private ProcedurePrepareLatch syncLatch;
-  private int attempts;
+  private RetryCounter retryCounter;
 
   public UpdatePermissionProcedure() {
   }
@@ -93,7 +94,10 @@ public class UpdatePermissionProcedure
           env.getMasterServices().getAccessChecker().getAuthManager().refresh(entry,
             userPermissions);
         } catch (IOException e) {
-          long backoff = ProcedureUtil.getBackoffTimeMs(this.attempts++);
+          if (retryCounter == null) {
+            retryCounter = ProcedureUtil.createRetryCounter(env.getMasterConfiguration());
+          }
+          long backoff = retryCounter.getBackoffTimeAndIncrementAttempts();
           LOG.warn(
             "Failed to update user permission {}, type {}, merge existing permissions {},  "
                 + "sleep {} secs and retry",
