@@ -102,6 +102,18 @@ public class ZKPermissionStorage {
   }
 
   /**
+   * Delete all permissions in zookeeper
+   */
+  public void deleteAllPermissions() {
+    try {
+      ZKUtil.deleteNodeFailSilent(watcher, aclZNode);
+    } catch (KeeperException e) {
+      LOG.error("Failed deleting all permissions", e);
+      watcher.abort("Failed deleting node " + aclZNode + " from zookeeper", e);
+    }
+  }
+
+  /**
    * Delete the acl node of table
    * @param tableName the table name
    */
