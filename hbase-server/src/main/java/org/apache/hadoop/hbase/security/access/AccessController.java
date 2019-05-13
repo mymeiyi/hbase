@@ -250,16 +250,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     // because acl table is source of truth
     final Region region = e.getRegion();
     Configuration conf = e.getConfiguration();
-    Map<byte[], ListMultimap<String, UserPermission>> permissions =
-        PermissionStorage.loadAll(region);
-    zkPermissionStorage.deleteAllPermissions();
-    for (Map.Entry<byte[], ListMultimap<String, UserPermission>> permission : permissions
-        .entrySet()) {
-      byte[] entry = permission.getKey();
-      ListMultimap<String, UserPermission> perms = permission.getValue();
-      byte[] serialized = PermissionStorage.writePermissionsAsBytes(perms, conf);
-      zkPermissionStorage.writePermission(entry, serialized);
-    }
+    zkPermissionStorage.updateAllPermissions(conf, PermissionStorage.loadAll(region));
     initialized = true;
   }
 

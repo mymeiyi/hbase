@@ -19,7 +19,9 @@
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
@@ -31,6 +33,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 
 /**
  * Store user permissions in zk. Used when cluster startup, because the acl table is not online.
@@ -102,14 +106,27 @@ public class ZKPermissionStorage {
   }
 
   /**
-   * Delete all permissions in zookeeper
+   * Update all permissions in zookeeper
    */
-  public void deleteAllPermissions() {
+  public void updateAllPermissions(Configuration conf,
+      Map<byte[], ListMultimap<String, UserPermission>> permissions) {
     try {
-      ZKUtil.deleteNodeFailSilent(watcher, aclZNode);
+      // TODO: modify
+      List<ZKUtil.ZKUtilOp> zkOps = new ArrayList<>();
+      zkOps.add(ZKUtil.ZKUtilOp.deleteNodeFailSilent(aclZNode));
+      for (Map.Entry<byte[], ListMultimap<String, UserPermission>> permission : permissions
+          .entrySet()) {
+        byte[] entry = permission.getKey();
+        ListMultimap<String, UserPermission> perms = permission.getValue();
+        byte[] serialized = PermissionStorage.writePermissionsAsBytes(perms, conf);
+        String entryName = Bytes.toString(entry);
+        String zkNode = ZNodePaths.joinZNode(aclZNode, entryName);
+        zkOps.add(ZKUtil.ZKUtilOp.createAndFailSilent(zkNode, serialized));
+      }
+      ZKUtil.multiOrSequential(watcher, zkOps, false);
     } catch (KeeperException e) {
-      LOG.error("Failed deleting all permissions", e);
-      watcher.abort("Failed deleting node " + aclZNode + " from zookeeper", e);
+      LOG.error("Failed updating all permissions", e);
+      watcher.abort("Failed updating node " + aclZNode + " from zookeeper", e);
     }
   }
 
