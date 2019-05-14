@@ -1969,7 +1969,7 @@ public class HRegionServer extends HasThread implements
     this.executorService.startExecutorService(ExecutorType.RS_SWITCH_RPC_THROTTLE,
       conf.getInt("hbase.regionserver.executor.switch.rpc.throttle.threads", 1));
     this.executorService.startExecutorService(ExecutorType.RS_REFRESH_PERMISSION_CACHE,
-      conf.getInt("hbase.regionserver.executor.refresh.permission.cache.threads", 1));
+      conf.getInt("hbase.regionserver.executor.refresh.permission.cache.threads", 5));
 
     Threads.setDaemonThreadRunning(this.walRoller.getThread(), getName() + ".logRoller",
     uncaughtExceptionHandler);

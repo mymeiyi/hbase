@@ -271,4 +271,10 @@ public class TestAccessController3 extends SecureTestUtil {
       authManager.authorizeUserTable(USER_RW, TEST_TABLE, Action.WRITE);
     }
   }
+
+  @Test
+  public void testUpdateZKPermissionStorage() throws Exception {
+    // TODO
+
+  }
 }

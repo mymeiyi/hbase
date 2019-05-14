@@ -1959,6 +1959,9 @@ public class ProcedureExecutor<TEnvironment> {
           LOG.trace("Execute pid={} runningCount={}, activeCount={}", proc.getProcId(),
             runningCount, activeCount);
           executionStartTime.set(EnvironmentEdgeManager.currentTime());
+          if (proc.toString().contains("UpdatePermission")) {
+            LOG.info("sout: Procedure: {}", proc.toString());
+          }
           IdLock.Entry lockEntry = procExecutionLock.getLockEntry(proc.getProcId());
           try {
             executeProcedure(proc);

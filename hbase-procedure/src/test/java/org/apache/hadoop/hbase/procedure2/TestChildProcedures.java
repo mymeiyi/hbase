@@ -45,7 +45,7 @@ public class TestChildProcedures {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestChildProcedures.class);
 
-  private static final int PROCEDURE_EXECUTOR_SLOTS = 1;
+  private static final int PROCEDURE_EXECUTOR_SLOTS = 5;
 
   private static TestProcEnv procEnv;
   private static ProcedureExecutor<TestProcEnv> procExecutor;

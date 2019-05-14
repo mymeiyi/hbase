@@ -25,13 +25,19 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.UpdatePermissionStateData;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Random;
 
 @InterfaceAudience.Private
 public class UpdatePermissionRemoteCallable implements RSProcedureCallable {
+  private static final Logger LOG = LoggerFactory.getLogger(UpdatePermissionRemoteCallable.class);
   private HRegionServer rs;
   private Exception initError;
   private ByteString userPermissions;
   private String entry;
+  Random random = new Random();
 
   public UpdatePermissionRemoteCallable() {
   }
@@ -58,6 +64,9 @@ public class UpdatePermissionRemoteCallable implements RSProcedureCallable {
     if (initError != null) {
       throw initError;
     }
+    int val = random.nextInt(2000) + 500;
+    LOG.info("sout: sleep: {}", val);
+    Thread.sleep(val);
     rs.getAccessChecker().getAuthManager().refresh(entry, userPermissions.toByteArray());
     return null;
   }

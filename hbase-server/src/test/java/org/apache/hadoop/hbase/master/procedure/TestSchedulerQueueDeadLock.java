@@ -166,7 +166,7 @@ public class TestSchedulerQueueDeadLock {
     MasterProcedureScheduler scheduler = new MasterProcedureScheduler(pid -> null);
     procExec = new ProcedureExecutor<>(UTIL.getConfiguration(), new TestEnv(scheduler), procStore,
       scheduler);
-    procExec.init(1, false);
+    procExec.init(5, false);
   }
 
   @After

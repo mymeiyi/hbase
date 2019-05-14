@@ -250,7 +250,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     // because acl table is source of truth
     final Region region = e.getRegion();
     Configuration conf = e.getConfiguration();
-    zkPermissionStorage.updateAllPermissions(conf, PermissionStorage.loadAll(region));
+    // zkPermissionStorage.updateAllPermissions(conf, PermissionStorage.loadAll(region));
     initialized = true;
   }
 

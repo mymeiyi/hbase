@@ -38,6 +38,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.stream.Collectors;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileStatus;
@@ -234,7 +242,7 @@ public class TestAccessController extends SecureTestUtil {
     // Enable EXEC permission checking
     conf.setBoolean(AccessControlConstants.EXEC_PERMISSION_CHECKS_KEY, true);
 
-    TEST_UTIL.startMiniCluster();
+    TEST_UTIL.startMiniCluster(2);
     MasterCoprocessorHost masterCpHost =
       TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
     masterCpHost.load(AccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
@@ -346,6 +354,68 @@ public class TestAccessController extends SecureTestUtil {
     assertEquals(0, PermissionStorage.getTablePermissions(conf, TEST_TABLE).size());
     assertEquals(0,
       PermissionStorage.getNamespacePermissions(conf, TEST_TABLE.getNamespaceAsString()).size());
+  }
+
+  @Test
+  public void testGrantAtSameTime() throws Exception {
+    List<Permission.Action[]> list = new ArrayList<>();
+    list.add(new Permission.Action[] { Action.READ });
+    list.add(new Permission.Action[] { Action.WRITE });
+    list.add(new Permission.Action[] { Action.ADMIN });
+    list.add(new Permission.Action[] { Action.READ, Action.WRITE });
+    list.add(new Permission.Action[] { Action.READ, Action.CREATE, Action.ADMIN });
+    list.add(new Permission.Action[] { Action.WRITE, Action.CREATE });
+    list.add(new Permission.Action[] { Action.CREATE, Action.ADMIN });
+    list.add(new Permission.Action[] { Action.ADMIN, Action.EXEC });
+    list.add(new Permission.Action[] { Action.READ, Action.EXEC, Action.CREATE });
+    list.add(new Permission.Action[] { Action.WRITE, Action.EXEC });
+    ExecutorService pool = Executors.newFixedThreadPool(10);
+    /*List<CompletableFuture<Object>> futures =
+        list.stream().map(actions -> CompletableFuture.supplyAsync(() -> {
+          try {
+            grantOnTable(TEST_UTIL, USER_RW.getShortName(), TEST_TABLE, TEST_FAMILY, null,
+              Action.READ, Action.WRITE);
+          } catch (Exception e) {
+            LOG.error("sout: exp: ", e);
+          }
+          return null;
+        }, pool)).collect(Collectors.toList());
+    CompletableFuture[] futureArray = new CompletableFuture[futures.size()];
+    CompletableFuture.allOf(futures.toArray(futureArray)).get();*/
+    try {
+      for (Action[] actions : list) {
+        grantOnTable(TEST_UTIL, USER_RW.getShortName(), TEST_TABLE, TEST_FAMILY, null, actions);
+        /*List<Future> futures = new ArrayList<>();
+        LOG.info("sout: start grant 0: {}", actions);
+        Future<Callable<Void>> future = pool.submit(() -> new Callable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            LOG.info("sout: start grant: {}", actions);
+            grantOnTable(TEST_UTIL, USER_RW.getShortName(), TEST_TABLE, TEST_FAMILY, null, actions);
+            LOG.info("sout: finish grant: {}", actions);
+            return null;
+          }
+        });
+        futures.add(future);
+        for (Future future1 : futures) {
+          future1.get();
+        }*/
+      }
+    } catch (Exception e) {
+      LOG.error("sout: exp: ", e);
+    }
+
+    AuthManager masterAuthManager =
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getAccessChecker().getAuthManager();
+    Set<AuthManager> authManagers = SecureTestUtil.getAuthManagers(TEST_UTIL.getHBaseCluster());
+    LOG.info("sout: start show master auth manager");
+    masterAuthManager.show();
+    int index = 0;
+    for (AuthManager authManager : authManagers) {
+      LOG.info("sout: start show {} auth manager", index);
+      authManager.show();
+      index++;
+    }
   }
 
   @Test

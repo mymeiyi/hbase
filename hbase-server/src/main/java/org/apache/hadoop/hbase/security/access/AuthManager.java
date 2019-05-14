@@ -130,6 +130,14 @@ public final class AuthManager {
             updateGlobalCache(perms);
           } else {
             updateTableCache(table, perms);
+            LOG.info("sout: update table {} cache", table);
+            PermissionCache<TablePermission> cache = tableCache.get(table);
+            for (Map.Entry<String, Set<TablePermission>> entry : cache.cache.entrySet()) {
+              LOG.info("sout: cache entry key: {}", entry.getKey());
+              for (TablePermission perm : entry.getValue()) {
+                LOG.info("sout: cache entry val:{}", perm);
+              }
+            }
           }
         }
       } catch (DeserializationException e) {
@@ -525,6 +533,36 @@ public final class AuthManager {
       removeNamespace(PermissionStorage.fromNamespaceEntry(Bytes.toBytes(entry)));
     } else {
       removeTable(TableName.valueOf(entry));
+    }
+  }
+
+  public void show() {
+    /*LOG.info("sout: show global cache");
+    for (Map.Entry<String, GlobalPermission> entry : globalCache.entrySet()) {
+      LOG.info("  global:{}, {}", entry.getKey(), entry.getValue());
+    }
+    LOG.info("sout: show namespace cache");
+    for (Map.Entry<String, PermissionCache<NamespacePermission>> entry : namespaceCache
+        .entrySet()) {
+      LOG.info("  ns:{}", entry.getKey());
+      for (Map.Entry<String, Set<NamespacePermission>> entry2 : entry.getValue().cache.entrySet()) {
+        LOG.info("    user:{}", entry2.getKey());
+        for (NamespacePermission namespacePermission : entry2.getValue()) {
+          LOG.info("      up:{}", namespacePermission);
+        }
+      }
+    }*/
+    LOG.info("sout: show table cache");
+    for (Map.Entry<TableName, PermissionCache<TablePermission>> entry : tableCache.entrySet()) {
+      LOG.info("  table:{}", entry.getKey());
+      for (Map.Entry<String, Set<TablePermission>> entry2 : entry.getValue().cache.entrySet()) {
+        if (entry2.getKey().equals("rwuser")) {
+          LOG.info("    table2:{}", entry2.getKey());
+          for (TablePermission perm : entry2.getValue()) {
+            LOG.info("      sout: table3:{}", perm);
+          }
+        }
+      }
     }
   }
 }
