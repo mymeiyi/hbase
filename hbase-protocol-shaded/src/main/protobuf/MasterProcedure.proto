@@ -441,7 +441,7 @@ message RefreshPeerParameter {
   required PeerModificationType type = 2;
   required ServerName target_server = 3;
   /** We need multiple stages for sync replication state transition **/
-  optional uint32 stage = 4 [default = 0];;
+  optional uint32 stage = 4 [default = 0];
 }
 
 message PeerProcedureStateData {
@@ -616,24 +616,19 @@ enum UpdatePermissionState {
   POST_UPDATE_PERMISSION = 3;
 }
 
+enum UpdatePermissionType {
+  GRANT = 1;
+  REVOKE = 2;
+  DELETE_TABLE = 3;
+  DELETE_NAMESPACE = 4;
+}
+
 message UpdatePermissionStateData {
   required ServerName target_server = 1;
   required string entry = 2;
-  required bytes user_permissions = 3;
 }
 
 message UpdatePermissionRemoteStateData {
-  required ServerName target_server = 1;
-  required string entry = 2;
-  required bytes user_permissions = 3;
-}
-
-message RemovePermissionStateData {
-  required ServerName target_server = 1;
-  required string entry = 2;
-}
-
-message RemovePermissionRemoteStateData {
   required ServerName target_server = 1;
   required string entry = 2;
 }

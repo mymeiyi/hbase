@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -30,7 +31,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.UpdatePermissionRemoteStateData;
 
@@ -38,17 +38,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.U
 public class UpdatePermissionRemoteProcedure extends ServerRemoteProcedure
     implements ServerProcedureInterface {
   private static final Logger LOG = LoggerFactory.getLogger(UpdatePermissionRemoteProcedure.class);
-  private ByteString userPermissions;
   private String entry;
 
   public UpdatePermissionRemoteProcedure() {
   }
 
-  public UpdatePermissionRemoteProcedure(ServerName serverName, String entry,
-      byte[] userPermissions) {
+  public UpdatePermissionRemoteProcedure(ServerName serverName, String entry) {
     this.targetServer = serverName;
     this.entry = entry;
-    this.userPermissions = ByteString.copyFrom(userPermissions);
   }
 
   @Override
@@ -69,8 +66,8 @@ public class UpdatePermissionRemoteProcedure extends ServerRemoteProcedure
   @Override
   protected void complete(MasterProcedureEnv env, Throwable error) {
     if (error != null) {
-      LOG.warn("Failed to update permissions {} for entry {} on server {}", userPermissions, entry,
-        targetServer, error);
+      LOG.warn("Failed to update permissions for entry {} on server {}", entry, targetServer,
+        error);
       this.succ = false;
     } else {
       this.succ = true;
@@ -90,8 +87,7 @@ public class UpdatePermissionRemoteProcedure extends ServerRemoteProcedure
   @Override
   protected void serializeStateData(ProcedureStateSerializer serializer) throws IOException {
     UpdatePermissionRemoteStateData.newBuilder()
-        .setTargetServer(ProtobufUtil.toServerName(targetServer)).setEntry(entry)
-        .setUserPermissions(userPermissions).build();
+        .setTargetServer(ProtobufUtil.toServerName(targetServer)).setEntry(entry).build();
   }
 
   @Override
@@ -100,25 +96,22 @@ public class UpdatePermissionRemoteProcedure extends ServerRemoteProcedure
         serializer.deserialize(UpdatePermissionRemoteStateData.class);
     targetServer = ProtobufUtil.toServerName(data.getTargetServer());
     entry = data.getEntry();
-    userPermissions = data.getUserPermissions();
   }
 
   @Override
-  public RemoteOperation remoteCallBuild(MasterProcedureEnv env, ServerName remote) {
-    assert targetServer.equals(remote);
-    return new RSProcedureDispatcher.ServerOperation(this, getProcId(),
+  public Optional<RemoteOperation> remoteCallBuild(MasterProcedureEnv masterProcedureEnv,
+      ServerName serverName) {
+    assert targetServer.equals(serverName);
+    return Optional.of(new RSProcedureDispatcher.ServerOperation(this, getProcId(),
         UpdatePermissionRemoteCallable.class,
         UpdatePermissionRemoteStateData.newBuilder()
-            .setTargetServer(ProtobufUtil.toServerName(remote)).setEntry(entry)
-            .setUserPermissions(userPermissions).build().toByteArray());
+            .setTargetServer(ProtobufUtil.toServerName(serverName)).setEntry(entry).build()
+            .toByteArray()));
   }
 
   @Override
   protected void toStringClassDetails(StringBuilder sb) {
-    sb.append(getClass().getSimpleName());
-    sb.append(" server=");
-    sb.append(targetServer);
-    sb.append(", user permission=");
-    sb.append(userPermissions);
+    sb.append(getClass().getSimpleName()).append(" server=").append(targetServer).append(", entry=")
+        .append(entry);
   }
 }

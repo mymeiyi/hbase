@@ -31,6 +31,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
@@ -158,6 +159,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockH
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockService;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.UpdatePermissionType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AbortProcedureResponse;
@@ -2729,8 +2731,9 @@ public class MasterRpcServices extends RSRpcServices
         master.cpHost.preGrant(perm, mergeExistingPermissions);
       }
       ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
-      UpdatePermissionProcedure procedure = new UpdatePermissionProcedure(perm,
-          mergeExistingPermissions, true, master.getServerName(), getZKPermissionStorage(), latch);
+      UpdatePermissionProcedure procedure = new UpdatePermissionProcedure(
+          UpdatePermissionType.GRANT, master.getServerName(), getZKPermissionStorage(), latch,
+          Optional.of(perm), Optional.of(mergeExistingPermissions), Optional.empty());
       master.getMasterProcedureExecutor().submitProcedure(procedure);
       latch.await();
       if (master.cpHost != null) {
@@ -2752,8 +2755,9 @@ public class MasterRpcServices extends RSRpcServices
         master.cpHost.preRevoke(userPermission);
       }
       ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
-      UpdatePermissionProcedure procedure = new UpdatePermissionProcedure(userPermission, false,
-          false, master.getServerName(), getZKPermissionStorage(), latch);
+      UpdatePermissionProcedure procedure = new UpdatePermissionProcedure(
+          UpdatePermissionType.REVOKE, master.getServerName(), getZKPermissionStorage(), latch,
+          Optional.of(userPermission), Optional.empty(), Optional.empty());
       master.getMasterProcedureExecutor().submitProcedure(procedure);
       latch.await();
       if (master.cpHost != null) {

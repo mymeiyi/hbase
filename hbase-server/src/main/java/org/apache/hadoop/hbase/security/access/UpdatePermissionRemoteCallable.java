@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.security.access;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.UpdatePermissionStateData;
 
@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.U
 public class UpdatePermissionRemoteCallable implements RSProcedureCallable {
   private HRegionServer rs;
   private Exception initError;
-  private ByteString userPermissions;
   private String entry;
 
   public UpdatePermissionRemoteCallable() {
@@ -42,7 +41,6 @@ public class UpdatePermissionRemoteCallable implements RSProcedureCallable {
     try {
       UpdatePermissionStateData param = UpdatePermissionStateData.parseFrom(parameter);
       entry = param.getEntry();
-      userPermissions = param.getUserPermissions();
     } catch (InvalidProtocolBufferException e) {
       initError = e;
     }
@@ -58,7 +56,13 @@ public class UpdatePermissionRemoteCallable implements RSProcedureCallable {
     if (initError != null) {
       throw initError;
     }
-    rs.getAccessChecker().getAuthManager().refresh(entry, userPermissions.toByteArray());
+    byte[] entryBytes = Bytes.toBytes(entry);
+    byte[] permission = rs.getZKPermissionStorage().getPermission(entryBytes);
+    if (permission != null) {
+      rs.getAccessChecker().getAuthManager().refresh(entryBytes, permission);
+    } else {
+      rs.getAccessChecker().getAuthManager().remove(entryBytes);
+    }
     return null;
   }
 }

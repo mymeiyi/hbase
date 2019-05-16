@@ -71,7 +71,7 @@ public class ZKPermissionStorage {
             byte[] data = ZKUtil.getData(watcher, ZNodePaths.joinZNode(aclZNode, node));
             if (data != null) {
               try {
-                authManager.refresh(node, data);
+                authManager.refresh(Bytes.toBytes(node), data);
               } catch (IOException e) {
                 LOG.error("Failed deserialize permission data for {}", node, e);
               }
@@ -98,6 +98,23 @@ public class ZKPermissionStorage {
     } catch (KeeperException e) {
       LOG.error("Failed updating permissions for entry '{}'", entryName, e);
       watcher.abort("Failed writing node " + zkNode + " to zookeeper", e);
+    }
+  }
+
+  public byte[] getPermission(byte[] entry) {
+    String entryName = Bytes.toString(entry);
+    String zkNode = ZNodePaths.joinZNode(aclZNode, entryName);
+    try {
+      if (ZKUtil.checkExists(watcher, zkNode) != -1) {
+        byte[] data = ZKUtil.getData(watcher, zkNode);
+        return data;
+      } else {
+        return null;
+      }
+    } catch (KeeperException | InterruptedException e) {
+      LOG.error("Failed getting permissions for entry '{}'", entryName, e);
+      watcher.abort("Failed getting node " + zkNode + " from zookeeper", e);
+      return null;
     }
   }
 
