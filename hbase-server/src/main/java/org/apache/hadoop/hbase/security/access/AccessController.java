@@ -144,7 +144,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.UpdatePermissionType;
 
 /**
  * Provides basic authorization checks for data access and administrative
@@ -802,10 +801,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
             ((HasMasterServices) c.getEnvironment()).getMasterServices()
                 .getMasterProcedureExecutor();
         ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
-        UpdatePermissionProcedure procedure =
-            new UpdatePermissionProcedure(UpdatePermissionType.DELETE_TABLE,
-                c.getEnvironment().getServerName(), zkPermissionStorage, latch, Optional.empty(),
-                Optional.empty(), Optional.of(tableName.getNameAsString()));
+        UpdatePermissionProcedure procedure = new UpdatePermissionProcedure(
+            UpdatePermissionProcedure.UpdatePermissionType.DELETE_TABLE,
+            c.getEnvironment().getServerName(), zkPermissionStorage, latch, Optional.empty(),
+            Optional.empty(), Optional.of(tableName.getNameAsString()));
         masterProcedureExecutor.submitProcedure(procedure);
         latch.await();
         return null;
@@ -1116,8 +1115,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
                 .getMasterProcedureExecutor();
         ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
         UpdatePermissionProcedure procedure = new UpdatePermissionProcedure(
-            UpdatePermissionType.DELETE_NAMESPACE, ctx.getEnvironment().getServerName(),
-            zkPermissionStorage, latch, Optional.empty(), Optional.empty(), Optional.of(namespace));
+            UpdatePermissionProcedure.UpdatePermissionType.DELETE_NAMESPACE,
+            ctx.getEnvironment().getServerName(), zkPermissionStorage, latch, Optional.empty(),
+            Optional.empty(), Optional.of(namespace));
         masterProcedureExecutor.submitProcedure(procedure);
         latch.await();
         return null;

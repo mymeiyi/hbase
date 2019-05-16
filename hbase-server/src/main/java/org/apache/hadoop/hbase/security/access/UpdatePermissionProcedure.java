@@ -39,13 +39,16 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.UpdatePermissionState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.UpdatePermissionType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 @InterfaceAudience.Private
 public class UpdatePermissionProcedure
     extends StateMachineProcedure<MasterProcedureEnv, UpdatePermissionState>
     implements ServerProcedureInterface {
+  public enum UpdatePermissionType {
+    GRANT, REVOKE, DELETE_TABLE, DELETE_NAMESPACE
+  }
+
   private static Logger LOG = LoggerFactory.getLogger(UpdatePermissionProcedure.class);
   private UpdatePermissionType updatePermissionType;
   private ServerName serverName;
