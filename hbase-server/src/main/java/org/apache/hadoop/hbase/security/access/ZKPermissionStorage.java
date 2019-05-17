@@ -136,6 +136,18 @@ public class ZKPermissionStorage {
     deletePermission(zkNode);
   }
 
+  /**
+   * Delete all permissions in zookeeper
+   */
+  public void deleteAllPermissions() {
+    try {
+      ZKUtil.deleteNodeFailSilent(watcher, aclZNode);
+    } catch (KeeperException e) {
+      LOG.error("Failed deleting all permissions", e);
+      watcher.abort("Failed deleting node " + aclZNode + " from zookeeper", e);
+    }
+  }
+
   private void deletePermission(final String zkNode) {
     try {
       ZKUtil.deleteNode(watcher, zkNode);

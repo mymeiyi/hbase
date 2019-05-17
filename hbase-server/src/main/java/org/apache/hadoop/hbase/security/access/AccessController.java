@@ -246,18 +246,31 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   private void initialize(RegionCoprocessorEnvironment e) throws IOException {
-    /*final Region region = e.getRegion();
+    // Overwrite all permissions stored in zk after hbase:acl region is opened
+    // because acl table is source of truth
+    // 1. write zk, then submit update permission procedure
+    // 2. write zk atomically, skip procedure
+    // (cache may be different in newly started RS because write zk is not atomic)
+    final Region region = e.getRegion();
     Configuration conf = e.getConfiguration();
-    Map<byte[], ListMultimap<String, UserPermission>> tables = PermissionStorage.loadAll(region);
-    // For each table, write out the table's permissions to the respective
-    // znode for that table.
-    for (Map.Entry<byte[], ListMultimap<String, UserPermission>> t:
-      tables.entrySet()) {
-      byte[] entry = t.getKey();
-      ListMultimap<String, UserPermission> perms = t.getValue();
+    Map<byte[], ListMultimap<String, UserPermission>> permissions =
+        PermissionStorage.loadAll(region);
+    zkPermissionStorage.deleteAllPermissions();
+    for (Map.Entry<byte[], ListMultimap<String, UserPermission>> permission : permissions
+        .entrySet()) {
+      byte[] entry = permission.getKey();
+      ListMultimap<String, UserPermission> perms = permission.getValue();
       byte[] serialized = PermissionStorage.writePermissionsAsBytes(perms, conf);
-      zkPermissionWatcher.writePermission(entry, serialized);
-    }*/
+      zkPermissionStorage.writePermission(entry, serialized);
+    }
+    if (e instanceof HasRegionServerServices) {
+      RegionServerServices rsServices = ((HasRegionServerServices) e).getRegionServerServices();
+      ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
+      UpdatePermissionProcedure procedure =
+          new UpdatePermissionProcedure(UpdatePermissionProcedure.UpdatePermissionType.RELOAD,
+              e.getServerName(), latch, Optional.empty(), Optional.empty(), Optional.empty());
+      latch.await();
+    }
     initialized = true;
   }
 

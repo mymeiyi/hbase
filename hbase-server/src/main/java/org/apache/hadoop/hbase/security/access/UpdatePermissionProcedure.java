@@ -47,7 +47,7 @@ public class UpdatePermissionProcedure
     extends StateMachineProcedure<MasterProcedureEnv, UpdatePermissionState>
     implements ServerProcedureInterface {
   public enum UpdatePermissionType {
-    GRANT, REVOKE, DELETE_TABLE, DELETE_NAMESPACE
+    GRANT, REVOKE, DELETE_TABLE, DELETE_NAMESPACE, RELOAD
   }
 
   private static Logger LOG = LoggerFactory.getLogger(UpdatePermissionProcedure.class);
