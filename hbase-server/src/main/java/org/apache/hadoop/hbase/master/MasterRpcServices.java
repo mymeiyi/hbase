@@ -2730,16 +2730,12 @@ public class MasterRpcServices extends RSRpcServices
         master.cpHost.preGrant(perm, mergeExistingPermissions);
       }
       ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
-      UpdatePermissionProcedure procedure =
-          new UpdatePermissionProcedure(UpdatePermissionProcedure.UpdatePermissionType.GRANT,
-              master.getServerName(), getZKPermissionStorage(), latch, Optional.of(perm),
-              Optional.of(mergeExistingPermissions), Optional.empty());
-      master.getMasterProcedureExecutor().submitProcedure(procedure);
+      UpdatePermissionProcedure procedure = new UpdatePermissionProcedure(
+          UpdatePermissionProcedure.UpdatePermissionType.GRANT, master.getServerName(), latch,
+          Optional.of(perm), Optional.of(mergeExistingPermissions), Optional.empty());
+      long procId = master.getMasterProcedureExecutor().submitProcedure(procedure);
       latch.await();
-      if (master.cpHost != null) {
-        master.cpHost.postGrant(perm, mergeExistingPermissions);
-      }
-      return GrantResponse.getDefaultInstance();
+      return GrantResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -2755,16 +2751,12 @@ public class MasterRpcServices extends RSRpcServices
         master.cpHost.preRevoke(userPermission);
       }
       ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
-      UpdatePermissionProcedure procedure =
-          new UpdatePermissionProcedure(UpdatePermissionProcedure.UpdatePermissionType.REVOKE,
-              master.getServerName(), getZKPermissionStorage(), latch, Optional.of(userPermission),
-              Optional.empty(), Optional.empty());
-      master.getMasterProcedureExecutor().submitProcedure(procedure);
+      UpdatePermissionProcedure procedure = new UpdatePermissionProcedure(
+          UpdatePermissionProcedure.UpdatePermissionType.REVOKE, master.getServerName(), latch,
+          Optional.of(userPermission), Optional.empty(), Optional.empty());
+      long procId = master.getMasterProcedureExecutor().submitProcedure(procedure);
       latch.await();
-      if (master.cpHost != null) {
-        master.cpHost.postRevoke(userPermission);
-      }
-      return RevokeResponse.getDefaultInstance();
+      return RevokeResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }

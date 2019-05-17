@@ -2138,14 +2138,26 @@ public interface Admin extends Abortable, Closeable {
    *          permissions.
    * @throws IOException if a remote or network exception occurs
    */
+  /*default void grant(UserPermission userPermission, boolean mergeExistingPermissions) throws IOException {
+    get(grantAsync(userPermission, mergeExistingPermissions));
+  }*/
+
   void grant(UserPermission userPermission, boolean mergeExistingPermissions) throws IOException;
+
+  Future<Void> grantAsync(UserPermission userPermission, boolean mergeExistingPermissions) throws IOException;
 
   /**
    * Revokes user specific permissions
    * @param userPermission user name and the specific permission
    * @throws IOException if a remote or network exception occurs
    */
+  /*default void revoke(UserPermission userPermission) throws IOException {
+    get(revokeAsync(userPermission));
+  }*/
+
   void revoke(UserPermission userPermission) throws IOException;
+
+  Future<Void> revokeAsync(UserPermission userPermission) throws IOException;
 
   /**
    * Get the global/namespace/table permissions for user

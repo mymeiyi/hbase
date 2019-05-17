@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ServerProcedureInterface;
@@ -52,7 +53,6 @@ public class UpdatePermissionProcedure
   private static Logger LOG = LoggerFactory.getLogger(UpdatePermissionProcedure.class);
   private UpdatePermissionType updatePermissionType;
   private ServerName serverName;
-  private ZKPermissionStorage zkPermissionStorage;
   private ProcedurePrepareLatch syncLatch;
   private RetryCounter retryCounter;
 
@@ -64,12 +64,10 @@ public class UpdatePermissionProcedure
   }
 
   public UpdatePermissionProcedure(UpdatePermissionType type, ServerName serverName,
-      ZKPermissionStorage zkPermissionStorage, ProcedurePrepareLatch syncLatch,
-      Optional<UserPermission> userPermission, Optional<Boolean> mergeExistingPermissions,
-      Optional<String> deleteEntry) {
+      ProcedurePrepareLatch syncLatch, Optional<UserPermission> userPermission,
+      Optional<Boolean> mergeExistingPermissions, Optional<String> deleteEntry) {
     this.updatePermissionType = type;
     this.serverName = serverName;
-    this.zkPermissionStorage = zkPermissionStorage;
     this.syncLatch = syncLatch;
     if (updatePermissionType == UpdatePermissionType.GRANT) {
       if (!userPermission.isPresent()) {
@@ -122,6 +120,11 @@ public class UpdatePermissionProcedure
       throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
     switch (state) {
       case UPDATE_PERMISSION_STORAGE:
+        /*try {
+          preUpdatePermission(env);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }*/
         try {
           // update permission in acl table and znode, refresh master auth manager
           updateStorageAndRefreshAuthManager(env);
@@ -150,10 +153,41 @@ public class UpdatePermissionProcedure
         setNextState(UpdatePermissionState.POST_UPDATE_PERMISSION);
         return Flow.HAS_MORE_STATE;
       case POST_UPDATE_PERMISSION:
+        try {
+          postUpdatePermission(env);
+        } catch (IOException e) {
+          /*LOG.warn(
+            "{} failed to call post CP hook after updating permission, type {}, "
+                + "ignore since the procedure has already done",
+            getClass().getName(), updatePermissionType, e);*/
+          throw new RuntimeException(e);
+        }
         ProcedurePrepareLatch.releaseLatch(syncLatch, this);
         return Flow.NO_MORE_STATE;
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);
+    }
+  }
+
+  private void preUpdatePermission(MasterProcedureEnv env) throws IOException {
+    MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
+    if (cpHost != null) {
+      if (updatePermissionType == UpdatePermissionType.GRANT) {
+        cpHost.preGrant(userPermission, mergeExistingPermissions);
+      } else if (updatePermissionType == UpdatePermissionType.REVOKE) {
+        cpHost.preRevoke(userPermission);
+      }
+    }
+  }
+
+  private void postUpdatePermission(MasterProcedureEnv env) throws IOException {
+    MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
+    if (cpHost != null) {
+      if (updatePermissionType == UpdatePermissionType.GRANT) {
+        cpHost.postGrant(userPermission, mergeExistingPermissions);
+      } else if (updatePermissionType == UpdatePermissionType.REVOKE) {
+        cpHost.postRevoke(userPermission);
+      }
     }
   }
 
@@ -162,6 +196,7 @@ public class UpdatePermissionProcedure
         env.getMasterServices().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
       Configuration conf = env.getMasterConfiguration();
       AuthManager authManager = env.getMasterServices().getAccessChecker().getAuthManager();
+      ZKPermissionStorage zkPermissionStorage = env.getMasterServices().getZKPermissionStorage();
       if (updatePermissionType == UpdatePermissionType.GRANT) {
         // add user permission to acl table
         PermissionStorage.addUserPermission(conf, userPermission, table, mergeExistingPermissions);

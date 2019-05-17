@@ -803,9 +803,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
         UpdatePermissionProcedure procedure = new UpdatePermissionProcedure(
             UpdatePermissionProcedure.UpdatePermissionType.DELETE_TABLE,
-            c.getEnvironment().getServerName(), zkPermissionStorage, latch, Optional.empty(),
+            c.getEnvironment().getServerName(), latch, Optional.empty(),
             Optional.empty(), Optional.of(tableName.getNameAsString()));
-        masterProcedureExecutor.submitProcedure(procedure);
+        long procId = masterProcedureExecutor.submitProcedure(procedure);
+//        masterProcedureExecutor.getResult()
         latch.await();
         return null;
       });
@@ -1115,10 +1116,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
                 .getMasterProcedureExecutor();
         ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
         UpdatePermissionProcedure procedure = new UpdatePermissionProcedure(
-            UpdatePermissionProcedure.UpdatePermissionType.DELETE_NAMESPACE,
-            ctx.getEnvironment().getServerName(), zkPermissionStorage, latch, Optional.empty(),
+            UpdatePermissionProcedure.UpdatePermissionType.DELETE_NAMESPACE, 
+            ctx.getEnvironment().getServerName(), latch, Optional.empty(),
             Optional.empty(), Optional.of(namespace));
-        masterProcedureExecutor.submitProcedure(procedure);
+        long procId = masterProcedureExecutor.submitProcedure(procedure);
         latch.await();
         return null;
       });

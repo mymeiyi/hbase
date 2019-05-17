@@ -3862,6 +3862,55 @@ public class HBaseAdmin implements Admin {
       }
     });
   }
+  
+  @InterfaceAudience.Private
+  @InterfaceStability.Evolving
+  private static class UpdatePermissionFuture extends ProcedureFuture<Void> {
+    private final UserPermission userPermission;
+    private final Supplier<String> getOperation;
+
+    public UpdatePermissionFuture(HBaseAdmin admin, UserPermission userPermission, Long procId,
+        Supplier<String> getOperation) {
+      super(admin, procId);
+      this.userPermission = userPermission;
+      this.getOperation = getOperation;
+    }
+
+    @Override
+    public String toString() {
+      return "Operation: " + getOperation.get() + ", userPermission: " + userPermission;
+    }
+  }
+
+  @Override
+  public Future<Void> grantAsync(UserPermission userPermission, boolean mergeExistingPermissions)
+      throws IOException {
+    AccessControlProtos.GrantResponse response =
+        executeCallable(new MasterCallable<AccessControlProtos.GrantResponse>(getConnection(),
+            getRpcControllerFactory()) {
+          @Override
+          protected AccessControlProtos.GrantResponse rpcCall() throws Exception {
+            GrantRequest req =
+                ShadedAccessControlUtil.buildGrantRequest(userPermission, mergeExistingPermissions);
+            return this.master.grant(getRpcController(), req);
+          }
+        });
+    return new UpdatePermissionFuture(this, userPermission, response.getProcId(), () -> "GRANT");
+  }
+
+  @Override
+  public Future<Void> revokeAsync(UserPermission userPermission) throws IOException {
+    AccessControlProtos.RevokeResponse response =
+        executeCallable(new MasterCallable<AccessControlProtos.RevokeResponse>(getConnection(),
+            getRpcControllerFactory()) {
+          @Override
+          protected AccessControlProtos.RevokeResponse rpcCall() throws Exception {
+            RevokeRequest req = ShadedAccessControlUtil.buildRevokeRequest(userPermission);
+            return this.master.revoke(getRpcController(), req);
+          }
+        });
+    return new UpdatePermissionFuture(this, userPermission, response.getProcId(), () -> "REVOKE");
+  }
 
   @Override
   public List<UserPermission>
