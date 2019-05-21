@@ -264,12 +264,12 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       zkPermissionStorage.writePermission(entry, serialized);
     }
     if (e instanceof HasRegionServerServices) {
-      RegionServerServices rsServices = ((HasRegionServerServices) e).getRegionServerServices();
+      /*RegionServerServices rsServices = ((HasRegionServerServices) e).getRegionServerServices();
       ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
       UpdatePermissionProcedure procedure =
           new UpdatePermissionProcedure(UpdatePermissionProcedure.UpdatePermissionType.RELOAD,
               e.getServerName(), latch, Optional.empty(), Optional.empty(), Optional.empty());
-      latch.await();
+      latch.await();*/
     }
     initialized = true;
   }
