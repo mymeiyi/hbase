@@ -21,9 +21,9 @@ import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -31,9 +31,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.ObserverContextImpl;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -42,6 +40,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -57,9 +56,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Performs checks for reference counting w.r.t. AuthManager which is used by
- * AccessController.
- *
  * NOTE: Only one test in  here. In AMv2, there is problem deleting because
  * we are missing auth. For now disabled. See the cleanup method.
  */
@@ -124,30 +120,12 @@ public class TestAccessController3 extends SecureTestUtil {
   @Rule
   public TestName name = new TestName();
 
-  // class with faulty stop() method, controlled by flag
-  public static class FaultyAccessController extends AccessController {
-    public FaultyAccessController() {
-    }
-
-    @Override
-    public void stop(CoprocessorEnvironment env) {
-      super.stop(env);
-      if (callSuperTwice) {
-        super.stop(env);
-      }
-    }
-  }
-
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
     // Enable security
     enableSecurity(conf);
-    String accessControllerClassName = FaultyAccessController.class.getName();
-    // In this particular test case, we can't use SecureBulkLoadEndpoint because its doAs will fail
-    // to move a file for a random user
-    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, accessControllerClassName);
     // Verify enableSecurity sets up what we require
     verifyConfiguration(conf);
 
@@ -157,8 +135,7 @@ public class TestAccessController3 extends SecureTestUtil {
     TEST_UTIL.startMiniCluster();
     MasterCoprocessorHost cpHost =
       TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
-    cpHost.load(FaultyAccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
-    ACCESS_CONTROLLER = (AccessController) cpHost.findCoprocessor(accessControllerClassName);
+    ACCESS_CONTROLLER = cpHost.findCoprocessor(AccessController.class);
     CP_ENV = cpHost.createEnvironment(ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
     RegionServerCoprocessorHost rsHost;
     do {
@@ -277,23 +254,23 @@ public class TestAccessController3 extends SecureTestUtil {
   }
 
   @Test
-  public void testTableCreate() throws Exception {
-    AccessTestAction createTable = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
-        htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV), htd, null);
-        return null;
-      }
-    };
+  public void testRestartCluster() throws Exception {
+    TEST_UTIL.shutdownMiniHBaseCluster();
+    Thread.sleep(2000);
+    TEST_UTIL.restartHBaseCluster(1);
+    TEST_UTIL.waitTableAvailable(PermissionStorage.ACL_TABLE_NAME);
+    AuthManager masterAuthManager =
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getAccessChecker().getAuthManager();
+    masterAuthManager.authorizeUserGlobal(USER_ADMIN, Action.ADMIN);
+    masterAuthManager.authorizeUserTable(USER_RW, TEST_TABLE, Action.READ);
+    masterAuthManager.authorizeUserTable(USER_RW, TEST_TABLE, Action.WRITE);
+    Set<AuthManager> authManagers = SecureTestUtil.getAuthManagers(TEST_UTIL.getHBaseCluster());
+    for (AuthManager authManager : authManagers) {
+      authManager.authorizeUserGlobal(USER_ADMIN, Action.ADMIN);
+      authManager.authorizeUserTable(USER_RW, TEST_TABLE, Action.READ);
+      authManager.authorizeUserTable(USER_RW, TEST_TABLE, Action.WRITE);
+    }
 
-    // verify that superuser can create tables
-    verifyAllowed(createTable, SUPERUSER, USER_ADMIN, USER_GROUP_CREATE);
-
-    // all others should be denied
-    verifyDenied(createTable, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_ADMIN,
-      USER_GROUP_READ, USER_GROUP_WRITE);
+    // TODO stop, delete znode, start
   }
-
 }

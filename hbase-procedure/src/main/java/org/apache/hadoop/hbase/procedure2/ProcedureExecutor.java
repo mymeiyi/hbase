@@ -1344,6 +1344,9 @@ public class ProcedureExecutor<TEnvironment> {
       LOG.warn("RootProcedureState is null for " + proc.getProcId());
       return;
     }
+    /*if (proc.toString().contains("Permission")) {
+      LOG.info("sout: execute acl proce: {}", proc);
+    }*/
     do {
       // Try to acquire the execution
       if (!procStack.acquire(proc)) {
