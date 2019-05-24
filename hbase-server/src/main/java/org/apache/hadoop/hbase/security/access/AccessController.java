@@ -101,6 +101,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
+import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
@@ -806,8 +807,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
             UpdatePermissionProcedure.UpdatePermissionType.DELETE_TABLE,
             c.getEnvironment().getServerName(), latch, Optional.empty(), Optional.empty(),
             Optional.of(tableName.getNameAsString()));
-        masterProcedureExecutor.submitProcedure(procedure);
-        latch.await();
+        /*masterProcedureExecutor.submitProcedure(procedure);
+        latch.await();*/
+        ProcedureSyncWait.submitAndWaitProcedure(masterProcedureExecutor, procedure);
         return null;
       });
     }
@@ -1141,8 +1143,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
             UpdatePermissionProcedure.UpdatePermissionType.DELETE_NAMESPACE,
             ctx.getEnvironment().getServerName(), latch, Optional.empty(), Optional.empty(),
             Optional.of(namespace));
-        masterProcedureExecutor.submitProcedure(procedure);
-        latch.await();
+        //long procId = masterProcedureExecutor.submitProcedure(procedure);
+        ProcedureSyncWait.submitAndWaitProcedure(masterProcedureExecutor, procedure);
+        //latch.await();
         return null;
       });
     }

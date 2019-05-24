@@ -249,23 +249,23 @@ public class TestAccessController extends SecureTestUtil {
     TEST_UTIL.waitUntilAllRegionsAssigned(PermissionStorage.ACL_TABLE_NAME);
 
     // create a set of test users
-    SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
-    USER_ADMIN = User.createUserForTesting(conf, "admin2", new String[0]);
-    USER_RW = User.createUserForTesting(conf, "rwuser", new String[0]);
-    USER_RO = User.createUserForTesting(conf, "rouser", new String[0]);
-    USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
-    USER_CREATE = User.createUserForTesting(conf, "tbl_create", new String[0]);
-    USER_NONE = User.createUserForTesting(conf, "nouser", new String[0]);
-    USER_ADMIN_CF = User.createUserForTesting(conf, "col_family_admin", new String[0]);
+    SUPERUSER = User.createUserForTesting(TestAccessController.conf, "admin", new String[] { "supergroup" });
+    USER_ADMIN = User.createUserForTesting(TestAccessController.conf, "admin2", new String[0]);
+    USER_RW = User.createUserForTesting(TestAccessController.conf, "rwuser", new String[0]);
+    USER_RO = User.createUserForTesting(TestAccessController.conf, "rouser", new String[0]);
+    USER_OWNER = User.createUserForTesting(TestAccessController.conf, "owner", new String[0]);
+    USER_CREATE = User.createUserForTesting(TestAccessController.conf, "tbl_create", new String[0]);
+    USER_NONE = User.createUserForTesting(TestAccessController.conf, "nouser", new String[0]);
+    USER_ADMIN_CF = User.createUserForTesting(TestAccessController.conf, "col_family_admin", new String[0]);
 
     USER_GROUP_ADMIN =
-        User.createUserForTesting(conf, "user_group_admin", new String[] { GROUP_ADMIN });
+        User.createUserForTesting(TestAccessController.conf, "user_group_admin", new String[] { GROUP_ADMIN });
     USER_GROUP_CREATE =
-        User.createUserForTesting(conf, "user_group_create", new String[] { GROUP_CREATE });
+        User.createUserForTesting(TestAccessController.conf, "user_group_create", new String[] { GROUP_CREATE });
     USER_GROUP_READ =
-        User.createUserForTesting(conf, "user_group_read", new String[] { GROUP_READ });
+        User.createUserForTesting(TestAccessController.conf, "user_group_read", new String[] { GROUP_READ });
     USER_GROUP_WRITE =
-        User.createUserForTesting(conf, "user_group_write", new String[] { GROUP_WRITE });
+        User.createUserForTesting(TestAccessController.conf, "user_group_write", new String[] { GROUP_WRITE });
 
     systemUserConnection = TEST_UTIL.getConnection();
     setUpTableAndUserPermissions();
@@ -3140,6 +3140,14 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test
+  public void test() throws Throwable {
+    String conf = TEST_UTIL.getConfiguration().get("hbase.coprocessor.master.classes");
+    LOG.info("sout: conf: {}", conf);
+    TableName tname = TableName.valueOf("revoke");
+    TEST_UTIL.createTable(tname, TEST_FAMILY);
+  }
+
+  @Test
   public void testAccessControlRevokeOnlyFewPermission() throws Throwable {
     TableName tname = TableName.valueOf("revoke");
     try {
@@ -3151,6 +3159,9 @@ public class TestAccessController extends SecureTestUtil {
 
       List<UserPermission> userPermissions = AccessControlClient
           .getUserPermissions(TEST_UTIL.getConnection(), tname.getNameAsString());
+      for (UserPermission userPermission : userPermissions) {
+        LOG.info("sout: up: {}", userPermission);
+      }
       assertEquals(2, userPermissions.size());
 
       AccessControlClient.revoke(TEST_UTIL.getConnection(), tname, testUserPerms.getShortName(),

@@ -2733,12 +2733,13 @@ public class MasterRpcServices extends RSRpcServices
       UpdatePermissionProcedure procedure = new UpdatePermissionProcedure(
           UpdatePermissionProcedure.UpdatePermissionType.GRANT, master.getServerName(), latch,
           Optional.of(perm), Optional.of(mergeExistingPermissions), Optional.empty());
-      master.getMasterProcedureExecutor().submitProcedure(procedure);
-      latch.await();
+      long procId = master.getMasterProcedureExecutor().submitProcedure(procedure);
+      LOG.info("sout: submit acl proc in master grant: {}, pid: {}", perm, procId);
+      //latch.await();
       if (master.cpHost != null) {
         master.cpHost.postGrant(perm, mergeExistingPermissions);
       }
-      return GrantResponse.getDefaultInstance();
+      return GrantResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -2757,12 +2758,12 @@ public class MasterRpcServices extends RSRpcServices
       UpdatePermissionProcedure procedure = new UpdatePermissionProcedure(
           UpdatePermissionProcedure.UpdatePermissionType.REVOKE, master.getServerName(), latch,
           Optional.of(userPermission), Optional.empty(), Optional.empty());
-      master.getMasterProcedureExecutor().submitProcedure(procedure);
-      latch.await();
+      long procId = master.getMasterProcedureExecutor().submitProcedure(procedure);
+      //latch.await();
       if (master.cpHost != null) {
         master.cpHost.postRevoke(userPermission);
       }
-      return RevokeResponse.getDefaultInstance();
+      return RevokeResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -2789,6 +2790,9 @@ public class MasterRpcServices extends RSRpcServices
         boolean filter = (cf != null || userName != null) ? true : false;
         perms = PermissionStorage.getUserTablePermissions(master.getConfiguration(), table, cf, cq,
           userName, filter);
+        for (UserPermission perm : perms) {
+          LOG.info("sout: up in server: {}", perm);
+        }
       } else if (permissionType == Type.Namespace) {
         perms = PermissionStorage.getUserNamespacePermissions(master.getConfiguration(), namespace,
           userName, userName != null ? true : false);

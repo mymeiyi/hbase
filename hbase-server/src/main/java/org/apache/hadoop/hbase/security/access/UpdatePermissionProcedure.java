@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Optional;
 
 import org.apache.hadoop.conf.Configuration;
@@ -57,7 +58,7 @@ public class UpdatePermissionProcedure
 
   private UpdatePermissionType updatePermissionType;
   private ServerName serverName;
-  private ProcedurePrepareLatch syncLatch;
+  //private ProcedurePrepareLatch syncLatch;
   private RetryCounter retryCounter;
 
   private byte[] entry;
@@ -72,7 +73,7 @@ public class UpdatePermissionProcedure
       Optional<Boolean> mergeExistingPermissions, Optional<String> deleteEntry) {
     this.updatePermissionType = type;
     this.serverName = serverName;
-    this.syncLatch = syncLatch;
+    //this.syncLatch = syncLatch;
     if (updatePermissionType == UpdatePermissionType.GRANT) {
       if (!userPermission.isPresent()) {
         throw new IllegalArgumentException("UserPermission is empty");
@@ -152,7 +153,7 @@ public class UpdatePermissionProcedure
             getClass().getName(), updatePermissionType, e);
           throw new RuntimeException(e);
         }*/
-        ProcedurePrepareLatch.releaseLatch(syncLatch, this);
+        //ProcedurePrepareLatch.releaseLatch(syncLatch, this);
         return Flow.NO_MORE_STATE;
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);
@@ -193,7 +194,11 @@ public class UpdatePermissionProcedure
         PermissionStorage.addUserPermission(conf, userPermission, table, mergeExistingPermissions);
         // get permissions from acl table and write to zk
         ListMultimap<String, UserPermission> permissions =
-                PermissionStorage.getPermissions(conf, entry, table, null, null, null, false);
+            PermissionStorage.getPermissions(conf, entry, table, null, null, null, false);
+        LOG.info("sout: add permission {}, after {}", userPermission, permissions.size());
+        for (Map.Entry<String, UserPermission> up : permissions.entries()) {
+          LOG.info("sout: add permission: {}, {}", up.getKey(), up.getValue());
+        }
         byte[] userPermissions = PermissionStorage.writePermissionsAsBytes(permissions, conf);
         zkPermissionStorage.writePermission(entry, userPermissions);
         // update permission in master auth manager cache
@@ -283,18 +288,18 @@ public class UpdatePermissionProcedure
     return AclOperationType.UPDATE;
   }
 
-  @Override
+  /*@Override
   protected LockState acquireLock(MasterProcedureEnv env) {
     // TODO
     if (env.getProcedureScheduler().waitAclExclusiveLock(this, Bytes.toString(entry))) {
       return LockState.LOCK_EVENT_WAIT;
     }
     return LockState.LOCK_ACQUIRED;
-  }
+  }*/
 
-  @Override
+  /*@Override
   protected void releaseLock(MasterProcedureEnv env) {
     // TODO
     env.getProcedureScheduler().wakeAclExclusiveLock(this, Bytes.toString(entry));
-  }
+  }*/
 }
