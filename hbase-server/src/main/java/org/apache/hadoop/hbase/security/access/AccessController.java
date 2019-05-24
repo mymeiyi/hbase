@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.ServerName;
@@ -97,6 +98,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -248,17 +250,15 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   private void initialize(RegionCoprocessorEnvironment e) throws IOException {
     final Region region = e.getRegion();
     Configuration conf = e.getConfiguration();
-    Map<byte[], ListMultimap<String, UserPermission>> tables = PermissionStorage.loadAll(region);
     // For each table, write out the table's permissions to the respective
     // znode for that table.
-    for (Map.Entry<byte[], ListMultimap<String, UserPermission>> t:
-      tables.entrySet()) {
+    for (Map.Entry<byte[], ListMultimap<String, UserPermission>> t : PermissionStorage
+        .loadAll(region).entrySet()) {
       byte[] entry = t.getKey();
       ListMultimap<String, UserPermission> perms = t.getValue();
       byte[] serialized = PermissionStorage.writePermissionsAsBytes(perms, conf);
       zkPermissionStorage.writePermission(entry, serialized);
     }
-    // TODO
     initialized = true;
   }
 
@@ -995,13 +995,35 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {
     try (Admin admin = ctx.getEnvironment().getConnection().getAdmin()) {
+      MasterServices masterServices =
+          ((HasMasterServices) ctx.getEnvironment()).getMasterServices();
       if (!admin.tableExists(PermissionStorage.ACL_TABLE_NAME)) {
         createACLTable(admin);
       } else {
         this.aclTabAvailable = true;
+        List<RegionInfo> tableRegions = MetaTableAccessor.getTableRegions(
+          masterServices.getConnection(), PermissionStorage.ACL_TABLE_NAME, true);
+        // wait until acl table is online
+        for (RegionInfo region : tableRegions) {
+          RegionState regionState =
+              masterServices.getAssignmentManager().getRegionStates().getRegionState(region);
+          if (regionState.getState() != RegionState.State.OPEN) {
+            masterServices.getAssignmentManager().assign(region);
+          }
+        }
       }
+      ProcedureExecutor<MasterProcedureEnv> masterProcedureExecutor =
+          masterServices.getMasterProcedureExecutor();
+      ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
+      UpdatePermissionProcedure procedure =
+          new UpdatePermissionProcedure(UpdatePermissionProcedure.UpdatePermissionType.RELOAD,
+              ctx.getEnvironment().getServerName(), latch, Optional.empty(), Optional.empty(),
+              Optional.empty());
+      masterProcedureExecutor.submitProcedure(procedure);
+      // latch.await();
     }
   }
+
   /**
    * Create the ACL table
    * @throws IOException

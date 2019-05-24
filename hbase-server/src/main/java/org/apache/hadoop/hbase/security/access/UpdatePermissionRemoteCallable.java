@@ -60,7 +60,7 @@ public class UpdatePermissionRemoteCallable implements RSProcedureCallable {
       throw initError;
     }
     if (entry== null || entry.length()==0) {
-      // TODO reload
+      rs.getZKPermissionStorage().loadPermissionCache(rs.getAccessChecker().getAuthManager());
     } else {
       byte[] entryBytes = Bytes.toBytes(entry);
       byte[] permission = rs.getZKPermissionStorage().getPermission(entryBytes);

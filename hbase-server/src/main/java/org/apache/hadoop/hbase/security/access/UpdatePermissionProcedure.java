@@ -47,6 +47,9 @@ public class UpdatePermissionProcedure
     extends StateMachineProcedure<MasterProcedureEnv, UpdatePermissionState>
     implements AclProcedureInterface {
   private static Logger LOG = LoggerFactory.getLogger(UpdatePermissionProcedure.class);
+  // the entry represents that need to reload all kinds of permission cache
+  // because namespace and table can not contain a '#' character
+  private static final String RELOAD_ALL_ENTRY = "#Reload";
 
   public enum UpdatePermissionType {
     GRANT, REVOKE, DELETE_TABLE, DELETE_NAMESPACE, RELOAD
@@ -96,6 +99,8 @@ public class UpdatePermissionProcedure
         throw new IllegalArgumentException("Table is empty");
       }
       this.entry = Bytes.toBytes(deleteEntry.get());
+    } else if (updatePermissionType == UpdatePermissionType.RELOAD) {
+      LOG.info("Reload all permission cache");
     } else {
       throw new IllegalArgumentException("Unknown update permission type");
     }
@@ -220,6 +225,9 @@ public class UpdatePermissionProcedure
         zkPermissionStorage.deleteTablePermission(tableName);
         // remove all table permission from master auth manager cache
         env.getMasterServices().getAccessChecker().getAuthManager().remove(Bytes.toString(entry));
+      } else if (updatePermissionType == UpdatePermissionType.RELOAD) {
+        zkPermissionStorage
+            .loadPermissionCache(env.getMasterServices().getAccessChecker().getAuthManager());
       }
     }
   }
@@ -266,8 +274,7 @@ public class UpdatePermissionProcedure
     if (entry != null) {
       return Bytes.toString(entry);
     } else {
-      // Because namespace and table can not contain # character
-      return "#Reload";
+      return RELOAD_ALL_ENTRY;
     }
   }
 

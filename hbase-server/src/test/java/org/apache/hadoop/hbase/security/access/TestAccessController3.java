@@ -45,6 +45,9 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -270,7 +273,28 @@ public class TestAccessController3 extends SecureTestUtil {
       authManager.authorizeUserTable(USER_RW, TEST_TABLE, Action.READ);
       authManager.authorizeUserTable(USER_RW, TEST_TABLE, Action.WRITE);
     }
+  }
 
-    // TODO stop, delete znode, start
+  @Test
+  public void testDeleteAclZnodeAndRestartCluster() throws Exception {
+    TEST_UTIL.shutdownMiniHBaseCluster();
+    ZKWatcher watcher = TEST_UTIL.getZooKeeperWatcher();
+    String aclZNode = ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode,
+            conf.get("zookeeper.znode.acl.parent", ZKPermissionStorage.ACL_NODE));
+    ZKUtil.deleteNodeRecursively(watcher, aclZNode);
+    Thread.sleep(2000);
+    TEST_UTIL.restartHBaseCluster(1);
+    TEST_UTIL.waitTableAvailable(PermissionStorage.ACL_TABLE_NAME);
+    AuthManager masterAuthManager =
+            TEST_UTIL.getMiniHBaseCluster().getMaster().getAccessChecker().getAuthManager();
+    masterAuthManager.authorizeUserGlobal(USER_ADMIN, Action.ADMIN);
+    masterAuthManager.authorizeUserTable(USER_RW, TEST_TABLE, Action.READ);
+    masterAuthManager.authorizeUserTable(USER_RW, TEST_TABLE, Action.WRITE);
+    Set<AuthManager> authManagers = SecureTestUtil.getAuthManagers(TEST_UTIL.getHBaseCluster());
+    for (AuthManager authManager : authManagers) {
+      authManager.authorizeUserGlobal(USER_ADMIN, Action.ADMIN);
+      authManager.authorizeUserTable(USER_RW, TEST_TABLE, Action.READ);
+      authManager.authorizeUserTable(USER_RW, TEST_TABLE, Action.WRITE);
+    }
   }
 }
