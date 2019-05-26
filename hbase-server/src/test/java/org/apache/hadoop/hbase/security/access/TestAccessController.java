@@ -3139,13 +3139,13 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(regionLockHeartbeatAction, globalRWXUser, tableRWXUser);
   }
 
-  @Test
+  /*@Test
   public void test() throws Throwable {
     String conf = TEST_UTIL.getConfiguration().get("hbase.coprocessor.master.classes");
     LOG.info("sout: conf: {}", conf);
     TableName tname = TableName.valueOf("revoke");
     TEST_UTIL.createTable(tname, TEST_FAMILY);
-  }
+  }*/
 
   @Test
   public void testAccessControlRevokeOnlyFewPermission() throws Throwable {

@@ -2945,6 +2945,7 @@ public class HBaseAdmin implements Admin {
       if (exception != null) {
         throw exception;
       }
+      LOG.info("sout: finish procedure: pId: {}, result: {}", procId, result);
       return result;
     }
 
@@ -3869,6 +3870,7 @@ public class HBaseAdmin implements Admin {
             return this.master.grant(getRpcController(), req);
           }
         });
+    LOG.info("sout: grant proc id: {}", response.getProcId());
     return new UpdatePermissionFuture(this, userPermission, response.getProcId(), () -> "GRANT");
   }
 
@@ -3886,7 +3888,7 @@ public class HBaseAdmin implements Admin {
     return new UpdatePermissionFuture(this, userPermission, response.getProcId(), () -> "REVOKE");
   }
 
-  @Override
+  /*@Override
   public void grant(UserPermission userPermission, boolean mergeExistingPermissions)
       throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
@@ -3898,9 +3900,9 @@ public class HBaseAdmin implements Admin {
         return null;
       }
     });
-  }
+  }*/
 
-  @Override
+  /*@Override
   public void revoke(UserPermission userPermission) throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection(), getRpcControllerFactory()) {
       @Override
@@ -3910,7 +3912,7 @@ public class HBaseAdmin implements Admin {
         return null;
       }
     });
-  }
+  }*/
 
   @Override
   public List<UserPermission>
