@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -138,6 +139,39 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
     createDirIfNotExist(restoreDir);
     fs.setPermission(restoreDir, new FsPermission(conf.get(SNAPSHOT_RESTORE_DIRECTORY_PERMISSION,
       SNAPSHOT_RESTORE_DIRECTORY_PERMISSION_DEFAULT)));
+  }
+
+  public boolean grant(Connection connection, byte[] entry, Set<String> users) {
+    try {
+      if (PermissionStorage.isNamespaceEntry(entry)) {
+        String namespace = Bytes.toString(PermissionStorage.fromNamespaceEntry(entry));
+        createDirsIfNotExist(getNamespaceRootPaths(namespace));
+        handleNamespaceAcl(Sets.newHashSet(namespace), users, new HashSet<>(0), new HashSet<>(0),
+          HDFSAclOperation.OperationType.MODIFY);
+        try (Table aclTable = connection.getTable(PermissionStorage.ACL_TABLE_NAME)) {
+          SnapshotScannerHDFSAclController.SnapshotScannerHDFSAclStorage
+              .addUserNamespaceHdfsAcl(aclTable, users, namespace);
+        }
+      } else if (PermissionStorage.isGlobalEntry(entry)) {
+        createDirsIfNotExist(getGlobalRootPaths());
+        handleGlobalAcl(users, new HashSet<>(0), new HashSet<>(0),
+          HDFSAclOperation.OperationType.MODIFY);
+        try (Table aclTable = connection.getTable(PermissionStorage.ACL_TABLE_NAME)) {
+          SnapshotScannerHDFSAclController.SnapshotScannerHDFSAclStorage
+              .addUserGlobalHdfsAcl(aclTable, users);
+        }
+      } else {
+        TableName tableName = TableName.valueOf(entry);
+        createTableDirectories(tableName);
+        addTableAcl(tableName, users, "preset");
+        SnapshotScannerHDFSAclController.SnapshotScannerHDFSAclStorage
+            .addUserTableHdfsAcl(connection, users, tableName);
+      }
+      return true;
+    } catch (Exception e) {
+      LOG.error("Grant entry {} HDFS acls error", Bytes.toString(entry), e);
+      return false;
+    }
   }
 
   /**
@@ -440,9 +474,7 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
 
   void createTableDirectories(TableName tableName) throws IOException {
     List<Path> paths = getTableRootPaths(tableName, false);
-    for (Path path : paths) {
-      createDirIfNotExist(path);
-    }
+    createDirsIfNotExist(paths);
   }
 
   /**
@@ -534,8 +566,7 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
     return users;
   }
 
-  private Set<String>
-      getUsersWithReadAction(ListMultimap<String, UserPermission> permissionMultimap) {
+  Set<String> getUsersWithReadAction(ListMultimap<String, UserPermission> permissionMultimap) {
     return permissionMultimap.entries().stream()
         .filter(entry -> checkUserPermission(entry.getValue())).map(Map.Entry::getKey)
         .collect(Collectors.toSet());
@@ -615,6 +646,12 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
     return new AclEntry.Builder().setScope(scope)
         .setType(AuthUtil.isGroupPrincipal(name) ? GROUP : USER).setName(name)
         .setPermission(READ_EXECUTE).build();
+  }
+
+  void createDirsIfNotExist(List<Path> paths) throws IOException {
+    for (Path path : paths) {
+      createDirIfNotExist(path);
+    }
   }
 
   void createDirIfNotExist(Path path) throws IOException {

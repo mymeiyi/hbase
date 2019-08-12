@@ -144,17 +144,7 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
       return;
     }
     try (Admin admin = c.getEnvironment().getConnection().getAdmin()) {
-      if (admin.tableExists(PermissionStorage.ACL_TABLE_NAME)) {
-        // Check if acl table has 'm' CF, if not, add 'm' CF
-        TableDescriptor tableDescriptor = admin.getDescriptor(PermissionStorage.ACL_TABLE_NAME);
-        boolean containHdfsAclFamily = Arrays.stream(tableDescriptor.getColumnFamilies()).anyMatch(
-          family -> Bytes.equals(family.getName(), SnapshotScannerHDFSAclStorage.HDFS_ACL_FAMILY));
-        if (!containHdfsAclFamily) {
-          TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor)
-              .setColumnFamily(ColumnFamilyDescriptorBuilder
-                  .newBuilder(SnapshotScannerHDFSAclStorage.HDFS_ACL_FAMILY).build());
-          admin.modifyTable(builder.build());
-        }
+      if (SnapshotScannerHDFSAclStorage.checkAclTable(admin)) {
         aclTableInitialized = true;
       } else {
         throw new TableNotFoundException("Table " + PermissionStorage.ACL_TABLE_NAME
@@ -617,6 +607,24 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
   }
 
   static final class SnapshotScannerHDFSAclStorage {
+    static boolean checkAclTable(Admin admin) throws IOException {
+      if (admin.tableExists(PermissionStorage.ACL_TABLE_NAME)) {
+        // Check if acl table has 'm' CF, if not, add 'm' CF
+        TableDescriptor tableDescriptor = admin.getDescriptor(PermissionStorage.ACL_TABLE_NAME);
+        boolean containHdfsAclFamily = Arrays.stream(tableDescriptor.getColumnFamilies()).anyMatch(
+          family -> Bytes.equals(family.getName(), SnapshotScannerHDFSAclStorage.HDFS_ACL_FAMILY));
+        if (!containHdfsAclFamily) {
+          TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableDescriptor)
+              .setColumnFamily(ColumnFamilyDescriptorBuilder
+                  .newBuilder(SnapshotScannerHDFSAclStorage.HDFS_ACL_FAMILY).build());
+          admin.modifyTable(builder.build());
+        }
+        return true;
+      } else {
+        return false;
+      }
+    }
+
     /**
      * Add a new CF in HBase acl table to record if the HBase read permission is synchronized to
      * related hfiles. The record has two usages: 1. check if we need to remove HDFS acls for a
@@ -632,12 +640,22 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
     private static final byte[] HDFS_ACL_VALUE = Bytes.toBytes("R");
 
     static void addUserGlobalHdfsAcl(Table aclTable, String user) throws IOException {
-      addUserEntry(aclTable, user, PermissionStorage.ACL_GLOBAL_NAME);
+      addUserEntry(aclTable, Sets.newHashSet(user), PermissionStorage.ACL_GLOBAL_NAME);
+    }
+
+    static void addUserGlobalHdfsAcl(Table aclTable, Set<String> users) throws IOException {
+      addUserEntry(aclTable, users, PermissionStorage.ACL_GLOBAL_NAME);
     }
 
     static void addUserNamespaceHdfsAcl(Table aclTable, String user, String namespace)
         throws IOException {
-      addUserEntry(aclTable, user, Bytes.toBytes(PermissionStorage.toNamespaceEntry(namespace)));
+      addUserEntry(aclTable, Sets.newHashSet(user),
+        Bytes.toBytes(PermissionStorage.toNamespaceEntry(namespace)));
+    }
+
+    static void addUserNamespaceHdfsAcl(Table aclTable, Set<String> users, String namespace)
+        throws IOException {
+      addUserEntry(aclTable, users, Bytes.toBytes(PermissionStorage.toNamespaceEntry(namespace)));
     }
 
     static void addUserTableHdfsAcl(Connection connection, Set<String> users, TableName tableName)
@@ -658,12 +676,14 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
 
     static void addUserTableHdfsAcl(Table aclTable, String user, TableName tableName)
         throws IOException {
-      addUserEntry(aclTable, user, tableName.getName());
+      addUserEntry(aclTable, Sets.newHashSet(user), tableName.getName());
     }
 
-    private static void addUserEntry(Table t, String user, byte[] entry) throws IOException {
+    private static void addUserEntry(Table t, Set<String> users, byte[] entry) throws IOException {
       Put p = new Put(entry);
-      p.addColumn(HDFS_ACL_FAMILY, Bytes.toBytes(user), HDFS_ACL_VALUE);
+      for (String user : users) {
+        p.addColumn(HDFS_ACL_FAMILY, Bytes.toBytes(user), HDFS_ACL_VALUE);
+      }
       t.put(p);
     }
 
