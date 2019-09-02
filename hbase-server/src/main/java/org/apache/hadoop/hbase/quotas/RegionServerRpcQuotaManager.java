@@ -231,6 +231,8 @@ public class RegionServerRpcQuotaManager {
                 " table=" + table + " numWrites=" + numWrites +
                 " numReads=" + numReads + " numScans=" + numScans +
                 ": " + e.getMessage());
+      rsServices.getMetrics().incrementThrottledReadRequestsCount(numReads + numScans);
+      rsServices.getMetrics().incrementThrottledWriteRequestsCount(numWrites);
       throw e;
     }
     return quota;

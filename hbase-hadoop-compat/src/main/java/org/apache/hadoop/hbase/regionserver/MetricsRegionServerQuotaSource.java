@@ -38,6 +38,9 @@ public interface MetricsRegionServerQuotaSource extends BaseSource {
   String NUM_REGION_SIZE_REPORT_NAME = "numRegionSizeReports";
   String REGION_SIZE_REPORTING_CHORE_TIME_NAME = "regionSizeReportingChoreTime";
 
+  String THROTTLED_READ_REQUEST_COUNT_NAME = "throttledReadRequestCount";
+  String THROTTLED_WRITE_REQUEST_COUNT_NAME = "throttledWriteRequestCount";
+
   /**
    * Updates the metric tracking how many tables this RegionServer has marked as in violation
    * of their space quota.
@@ -83,4 +86,18 @@ public interface MetricsRegionServerQuotaSource extends BaseSource {
    * @param time The execution time in milliseconds.
    */
   void incrementRegionSizeReportingChoreTime(long time);
+
+  /**
+   * Update the metric tracking how many read requests are throttled by this RegionServer.
+   *
+   * @param num The number of throttled read requests
+   */
+  void incrementThrottledReadRequestsCount(long num);
+
+  /**
+   * Update the metric tracking how many write requests are throttled by this RegionServer.
+   *
+   * @param num The number of throttled write requests
+   */
+  void incrementThrottledWriteRequestsCount(long num);
 }

@@ -248,4 +248,18 @@ public class MetricsRegionServer {
   public void incrementRegionSizeReportingChoreTime(long time) {
     quotaSource.incrementRegionSizeReportingChoreTime(time);
   }
+
+  /**
+   * @see MetricsRegionServerQuotaSource#incrementThrottledReadRequestsCount(long)
+   */
+  public void incrementThrottledReadRequestsCount(long num) {
+    quotaSource.incrementThrottledReadRequestsCount(num);
+  }
+
+  /**
+   * @see MetricsRegionServerQuotaSource#incrementThrottledWriteRequestsCount(long)
+   */
+  public void incrementThrottledWriteRequestsCount(long num) {
+    quotaSource.incrementThrottledWriteRequestsCount(num);
+  }
 }

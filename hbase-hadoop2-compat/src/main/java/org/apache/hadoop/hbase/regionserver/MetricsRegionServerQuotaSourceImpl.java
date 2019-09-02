@@ -37,6 +37,8 @@ public class MetricsRegionServerQuotaSourceImpl extends BaseSourceImpl implement
   private final Timer spaceQuotaRefresherChoreTimer;
   private final Counter regionSizeReportCounter;
   private final Timer regionSizeReportingChoreTimer;
+  private final Counter throttledReadRequestCount;
+  private final Counter throttledWriteRequestCount;
 
   public MetricsRegionServerQuotaSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
@@ -52,6 +54,8 @@ public class MetricsRegionServerQuotaSourceImpl extends BaseSourceImpl implement
     spaceQuotaRefresherChoreTimer = this.registry.timer(SPACE_QUOTA_REFRESHER_CHORE_TIME);
     regionSizeReportCounter = this.registry.counter(NUM_REGION_SIZE_REPORT_NAME);
     regionSizeReportingChoreTimer = registry.timer(REGION_SIZE_REPORTING_CHORE_TIME_NAME);
+    throttledReadRequestCount = this.registry.counter(THROTTLED_READ_REQUEST_COUNT_NAME);
+    throttledWriteRequestCount = this.registry.counter(THROTTLED_WRITE_REQUEST_COUNT_NAME);
   }
 
   @Override
@@ -82,5 +86,15 @@ public class MetricsRegionServerQuotaSourceImpl extends BaseSourceImpl implement
   @Override
   public void incrementRegionSizeReportingChoreTime(long time) {
     regionSizeReportingChoreTimer.update(time, TimeUnit.MILLISECONDS);
+  }
+
+  @Override
+  public void incrementThrottledReadRequestsCount(long num) {
+    throttledReadRequestCount.increment(num);
+  }
+
+  @Override
+  public void incrementThrottledWriteRequestsCount(long num) {
+    throttledWriteRequestCount.increment(num);
   }
 }
