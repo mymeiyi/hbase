@@ -56,6 +56,8 @@ public class MetricsRegionServerQuotaSourceImpl extends BaseSourceImpl implement
     regionSizeReportingChoreTimer = registry.timer(REGION_SIZE_REPORTING_CHORE_TIME_NAME);
     throttledReadRequestCount = this.registry.counter(THROTTLED_READ_REQUEST_COUNT_NAME);
     throttledWriteRequestCount = this.registry.counter(THROTTLED_WRITE_REQUEST_COUNT_NAME);
+    this.registry.register(THROTTLED_WRITE_REQUEST_COUNT_NAME, throttledWriteRequestCount);
+    this.registry.register(THROTTLED_READ_REQUEST_COUNT_NAME, throttledReadRequestCount);
   }
 
   @Override
