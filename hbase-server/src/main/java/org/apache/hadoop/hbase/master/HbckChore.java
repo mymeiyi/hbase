@@ -146,6 +146,15 @@ public class HbckChore extends ScheduledChore {
     running = false;
   }
 
+  private void updateMetrics() {
+    master.getAssignmentManager().getAssignmentManagerMetrics()
+        .updateOrphanRegionsOnRs(getOrphanRegionsOnRS().size());
+    master.getAssignmentManager().getAssignmentManagerMetrics()
+        .updateOrphanRegionsOnFs(getOrphanRegionsOnFS().size());
+    master.getAssignmentManager().getAssignmentManagerMetrics()
+        .updateInconsistentRegions(getInconsistentRegions().size());
+  }
+
   // This function does the sanity checks of making sure the chore is not run when it is
   // disabled or when it's already running. It returns whether the chore was actually run or not.
   protected boolean runChore() {

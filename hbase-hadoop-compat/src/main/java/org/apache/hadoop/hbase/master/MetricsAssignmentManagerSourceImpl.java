@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.metrics.OperationMetrics;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.lib.MetricsInfoImpl;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -38,6 +39,15 @@ public class MetricsAssignmentManagerSourceImpl
   private MetricHistogram ritDurationHisto;
   private MutableGaugeLong deadServerOpenRegions;
   private MutableGaugeLong unknownServerOpenRegions;
+
+  private MutableGaugeLong orphanRegionsOnRSGauge;
+  private MutableGaugeLong orphanRegionsOnFSGauge;
+  private MutableGaugeLong inconsistentRegionsGauge;
+
+  private MutableGaugeLong holesGauge;
+  private MutableGaugeLong overlapsGauge;
+  private MutableGaugeLong unknownServerRegionsGauge;
+  private MutableGaugeLong emptyRegionInfoRegionsGauge;
 
   private MutableFastCounter operationCounter;
 
@@ -69,6 +79,20 @@ public class MetricsAssignmentManagerSourceImpl
     operationCounter = metricsRegistry.getCounter(OPERATION_COUNT_NAME, 0L);
     deadServerOpenRegions = metricsRegistry.newGauge(DEAD_SERVER_OPEN_REGIONS, "", 0);
     unknownServerOpenRegions = metricsRegistry.newGauge(UNKNOWN_SERVER_OPEN_REGIONS, "", 0);
+
+    orphanRegionsOnRSGauge =
+        metricsRegistry.newGauge(ORPHAN_REGIONS_ON_RS, ORPHAN_REGIONS_ON_RS_DESC, 0L);
+    orphanRegionsOnFSGauge =
+        metricsRegistry.newGauge(ORPHAN_REGIONS_ON_FS, ORPHAN_REGIONS_ON_FS_DESC, 0L);
+    inconsistentRegionsGauge =
+        metricsRegistry.newGauge(INCONSISTENT_REGIONS, INCONSISTENT_REGIONS_DESC, 0L);
+
+    holesGauge = metricsRegistry.newGauge(HOLES, HOLES_DESC, 0L);
+    overlapsGauge = metricsRegistry.newGauge(OVERLAPS, OVERLAPS_DESC, 0L);
+    unknownServerRegionsGauge =
+        metricsRegistry.newGauge(UNKNOWN_SERVER_REGIONS, UNKNOWN_SERVER_REGIONS_DESC, 0L);
+    emptyRegionInfoRegionsGauge =
+        metricsRegistry.newGauge(EMPTY_REGION_INFO_REGIONS, EMPTY_REGION_INFO_REGIONS_DESC, 0L);
 
     /**
      * NOTE: Please refer to HBASE-9774 and HBASE-14282. Based on these two issues, HBase is
@@ -118,6 +142,41 @@ public class MetricsAssignmentManagerSourceImpl
   @Override
   public void updateUnknownServerOpenRegions(int unknownRegions) {
     unknownServerOpenRegions.set(unknownRegions);
+  }
+
+  @Override
+  public void setOrphanRegionsOnRs(int orphanRegionsOnRs) {
+    orphanRegionsOnRSGauge.set(orphanRegionsOnRs);
+  }
+
+  @Override
+  public void setOrphanRegionsOnFs(int orphanRegionsOnFs) {
+    orphanRegionsOnFSGauge.set(orphanRegionsOnFs);
+  }
+
+  @Override
+  public void setInconsistentRegions(int inconsistentRegions) {
+    inconsistentRegionsGauge.set(inconsistentRegions);
+  }
+
+  @Override
+  public void setHoles(int holes) {
+    holesGauge.set(holes);
+  }
+
+  @Override
+  public void setOverlaps(int overlaps) {
+    overlapsGauge.set(overlaps);
+  }
+
+  @Override
+  public void setUnknownServerRegions(int unknownServerRegions) {
+    unknownServerRegionsGauge.set(unknownServerRegions);
+  }
+
+  @Override
+  public void setEmptyRegionInfoRegions(int emptyRegionInfoRegions) {
+    emptyRegionInfoRegionsGauge.set(emptyRegionInfoRegions);
   }
 
   @Override

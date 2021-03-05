@@ -61,6 +61,26 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   String RIT_DURATION_DESC =
       "Total durations in milliseconds for all Regions in Transition (Histogram).";
 
+  // HBCK report metrics
+  String ORPHAN_REGIONS_ON_RS = "orphanRegionsOnRS";
+  String ORPHAN_REGIONS_ON_FS = "orphanRegionsOnFS";
+  String INCONSISTENT_REGIONS = "inconsistentRegions";
+
+  String ORPHAN_REGIONS_ON_RS_DESC = "Current number of Orphan Regions on RS (Gauge).";
+  String ORPHAN_REGIONS_ON_FS_DESC = "Current number of Orphan Regions on FS (Gauge).";
+  String INCONSISTENT_REGIONS_DESC = "Current number of Inconsistent Regions (Gauge).";
+
+  // CatalogJanitor Consistency report metrics
+  String HOLES = "holes";
+  String OVERLAPS = "overlaps";
+  String UNKNOWN_SERVER_REGIONS = "unknownServerRegions";
+  String EMPTY_REGION_INFO_REGIONS = "emptyRegionInfoRegions";
+
+  String HOLES_DESC = "Current number of Holes (Gauge).";
+  String OVERLAPS_DESC = "Current number of Overlaps (Gauge).";
+  String UNKNOWN_SERVER_REGIONS_DESC = "Current number of Unknown Servers Regions (Gauge).";
+  String EMPTY_REGION_INFO_REGIONS_DESC = "Current number of Regions with Empty Region Info (Gauge).";
+
   String ASSIGN_METRIC_PREFIX = "assign";
   String UNASSIGN_METRIC_PREFIX = "unassign";
   String MOVE_METRIC_PREFIX = "move";
@@ -98,6 +118,20 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   void updateDeadServerOpenRegions(int deadRegions);
 
   void updateUnknownServerOpenRegions(int unknownRegions);
+
+  void setOrphanRegionsOnRs(int orphanRegionsOnRs);
+
+  void setOrphanRegionsOnFs(int orphanRegionsOnFs);
+
+  void setInconsistentRegions(int inconsistentRegions);
+
+  void setHoles(int holes);
+
+  void setOverlaps(int overlaps);
+
+  void setUnknownServerRegions(int unknownServerRegions);
+
+  void setEmptyRegionInfoRegions(int emptyRegionInfoRegions);
 
   /**
    * TODO: Remove. This may not be needed now as assign and unassign counts are tracked separately
