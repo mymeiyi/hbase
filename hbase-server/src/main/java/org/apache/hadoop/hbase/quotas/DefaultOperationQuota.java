@@ -122,6 +122,18 @@ public class DefaultOperationQuota implements OperationQuota {
 
   @Override
   public long getReadAvailable() {
+    if (readAvailable == Long.MAX_VALUE) {
+      long minReadCU = Long.MAX_VALUE;
+      for (QuotaLimiter limiter : limiters) {
+        long readCU = limiter.getReadCapacityUnitAvailable();
+        if (readCU < minReadCU) {
+          minReadCU = readCU;
+        }
+      }
+      if (minReadCU != Long.MAX_VALUE) {
+        return minReadCU * readCapacityUnit;
+      }
+    }
     return readAvailable;
   }
 

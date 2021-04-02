@@ -2561,7 +2561,7 @@
       </activation>
       <properties>
         <!-- TODO: replicate logic for windows support -->
-        <argLine>--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED ${hbase-surefire.argLine}</argLine>
+        <!--<argLine>&#45;&#45;add-opens=java.base/jdk.internal.ref=ALL-UNNAMED ${hbase-surefire.argLine}</argLine>-->
         <!-- We need a minimum HDFS version of 3.2.0 for HADOOP-12760 -->
         <hadoop-three.version>3.2.0</hadoop-three.version>
         <!--
