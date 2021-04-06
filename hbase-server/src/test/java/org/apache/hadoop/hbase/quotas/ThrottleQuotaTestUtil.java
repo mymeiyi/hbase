@@ -23,6 +23,9 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -98,6 +101,22 @@ public final class ThrottleQuotaTestUtil {
       }
     } catch (IOException e) {
       LOG.error("get failed after nRetries=" + count, e);
+    }
+    return count;
+  }
+
+  static long doScan(final Table... tables) {
+    long count = 0;
+    for (Table table : tables) {
+      try {
+        ResultScanner scanner = table.getScanner(new Scan());
+        Result result = null;
+        while ((result = scanner.next()) != null) {
+          count++;
+        }
+      } catch (IOException e) {
+        LOG.error("scan failed after nRetries=" + count, e);
+      }
     }
     return count;
   }

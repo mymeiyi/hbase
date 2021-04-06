@@ -3660,7 +3660,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     RpcCallContext context = RpcServer.getCurrentCall().orElse(null);
     // now let's do the real scan.
-    long maxQuotaResultSize = Math.min(maxScannerResultSize, quota.getReadAvailable());
+    long maxQuotaResultSize = Math.max(1, Math.min(maxScannerResultSize, quota.getReadAvailable()));
+    if (!region.getTableDescriptor().getTableName().isSystemTable()) {
+      LOG.info("Max quota size: {} for region: {}", maxQuotaResultSize, region);
+    }
     RegionScanner scanner = rsh.s;
     // this is the limit of rows for this scan, if we the number of rows reach this value, we will
     // close the scanner.

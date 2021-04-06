@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.quotas;
 
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.doGets;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.doPuts;
+import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.doScan;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerExceedThrottleQuotaCacheRefresh;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerNamespaceCacheRefresh;
 import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.triggerRegionServerCacheRefresh;
@@ -51,7 +52,7 @@ import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Ignore // Disabled because flakey. Fails ~30% on a resource constrained GCE though not on Apache.
+//@Ignore // Disabled because flakey. Fails ~30% on a resource constrained GCE though not on Apache.
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestQuotaThrottle {
 
@@ -650,6 +651,20 @@ public class TestQuotaThrottle {
     admin.exceedThrottleQuotaSwitch(false);
     triggerExceedThrottleQuotaCacheRefresh(TEST_UTIL, false);
     // unthrottle table
+    admin.setQuota(QuotaSettingsFactory.unthrottleTable(TABLE_NAMES[0]));
+    triggerTableCacheRefresh(TEST_UTIL, true, TABLE_NAMES[0]);
+  }
+
+  @Test
+  public void testScan() throws Exception {
+    final Admin admin = TEST_UTIL.getAdmin();
+    assertEquals(100, doPuts(100, 980, FAMILY, QUALIFIER, tables[0]));
+    admin.setQuota(QuotaSettingsFactory.throttleTable(TABLE_NAMES[0],
+      ThrottleType.READ_CAPACITY_UNIT, 5, TimeUnit.MINUTES));
+    triggerTableCacheRefresh(TEST_UTIL, false, TABLE_NAMES[0]);
+
+    long l = doScan(tables[0]);
+    LOG.info("scan result: {}", l);
     admin.setQuota(QuotaSettingsFactory.unthrottleTable(TABLE_NAMES[0]));
     triggerTableCacheRefresh(TEST_UTIL, true, TABLE_NAMES[0]);
   }
