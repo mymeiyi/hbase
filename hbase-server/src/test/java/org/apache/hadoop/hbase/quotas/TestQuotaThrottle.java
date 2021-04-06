@@ -656,15 +656,14 @@ public class TestQuotaThrottle {
   }
 
   @Test
-  public void testScan() throws Exception {
+  public void testScanReadCapacityUnitThrottle() throws Exception {
     final Admin admin = TEST_UTIL.getAdmin();
-    assertEquals(100, doPuts(100, 980, FAMILY, QUALIFIER, tables[0]));
+    assertEquals(100, doPuts(100, 1000, FAMILY, QUALIFIER, tables[0]));
     admin.setQuota(QuotaSettingsFactory.throttleTable(TABLE_NAMES[0],
       ThrottleType.READ_CAPACITY_UNIT, 5, TimeUnit.MINUTES));
     triggerTableCacheRefresh(TEST_UTIL, false, TABLE_NAMES[0]);
 
-    long l = doScan(tables[0]);
-    LOG.info("scan result: {}", l);
+    assertEquals(4,  doScan(tables[0]));
     admin.setQuota(QuotaSettingsFactory.unthrottleTable(TABLE_NAMES[0]));
     triggerTableCacheRefresh(TEST_UTIL, true, TABLE_NAMES[0]);
   }
