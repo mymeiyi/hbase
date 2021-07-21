@@ -639,6 +639,8 @@ abstract class ServerRpcConnection implements Closeable {
     for (Map.Entry<String, String> entry : traceInfo.getHeadersMap().entrySet()) {
       RpcServer.LOG.info("Trace info in map: {}, {}", entry.getKey(), entry.getValue());
     }
+    RpcServer.LOG.info("Span trace id: {}, span id: {}", span.getSpanContext().getTraceId(),
+      span.getSpanContext().getSpanId());
     try (Scope scope = span.makeCurrent()) {
       int id = header.getCallId();
       if (RpcServer.LOG.isTraceEnabled()) {
