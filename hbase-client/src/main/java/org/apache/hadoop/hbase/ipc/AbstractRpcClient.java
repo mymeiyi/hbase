@@ -369,15 +369,13 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
   protected abstract T createConnection(ConnectionId remoteId) throws IOException;
 
   private void onCallFinished(Call call, HBaseRpcController hrc, Address addr,
-    RpcCallback<Message> callback) {
+    RpcCallback<Message> callback, String traceId, String spanId) {
     call.callStats.setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.getStartTime());
     if (metrics != null) {
       metrics.updateRpc(call.md, call.param, call.callStats);
     }
-    if (LOG.isTraceEnabled()) {
-      LOG.trace(
-        "Call: " + call.md.getName() + ", callTime: " + call.callStats.getCallTimeMs() + "ms");
-    }
+    LOG.info("Call: " + call.md.getName() + ", callTime: " + call.callStats.getCallTimeMs() + "ms"
+        + ", traceId: " + traceId + ", spanId: " + spanId);
     if (call.error != null) {
       if (call.error instanceof RemoteException) {
         call.error.fillInStackTrace();
@@ -421,7 +419,8 @@ public abstract class AbstractRpcClient<T extends RpcConnection> implements RpcC
           public void run(Call call) {
             try (Scope scope = call.span.makeCurrent()) {
               counter.decrementAndGet();
-              onCallFinished(call, hrc, addr, callback);
+                onCallFinished(call, hrc, addr, callback, span.getSpanContext().getTraceId(),
+                  span.getSpanContext().getSpanId());
             } finally {
               if (hrc.failed()) {
                 TraceUtil.setError(span, hrc.getFailed());

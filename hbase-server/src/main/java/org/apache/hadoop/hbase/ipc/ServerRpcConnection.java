@@ -34,6 +34,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.security.GeneralSecurityException;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import org.apache.commons.crypto.cipher.CryptoCipherFactory;
@@ -86,6 +87,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHea
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.TracingProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.TracingProtos.RPCTInfo;
 
 /** Reads calls from a connection and queues them for handling. */
@@ -627,9 +629,16 @@ abstract class ServerRpcConnection implements Closeable {
         return carrier.getHeadersMap().get(key);
       }
     };
+    TracingProtos.RPCTInfo traceInfo = header.getTraceInfo();
     Context traceCtx = GlobalOpenTelemetry.getPropagators().getTextMapPropagator()
       .extract(Context.current(), header.getTraceInfo(), getter);
     Span span = TraceUtil.createRemoteSpan("RpcServer.process", traceCtx);
+    RpcServer.LOG.info("Trace info id: {}, span id: {}, traceId: {}",
+      span.getSpanContext().getTraceId(), span.getSpanContext().getSpanId(),
+      traceInfo.hasTraceId() ? traceInfo.getTraceId() : "");
+    for (Map.Entry<String, String> entry : traceInfo.getHeadersMap().entrySet()) {
+      RpcServer.LOG.info("Trace info in map: {}, {}", entry.getKey(), entry.getValue());
+    }
     try (Scope scope = span.makeCurrent()) {
       int id = header.getCallId();
       if (RpcServer.LOG.isTraceEnabled()) {
